@@ -1,6 +1,10 @@
 # plstudio
 
+[![CI](https://github.com/Mohameddhiab/plstudio/actions/workflows/ci.yml/badge.svg)](https://github.com/Mohameddhiab/plstudio/actions/workflows/ci.yml)
+
 IDE open source en Rust pour développer des applications Android avec **Flutter**. Rapide, léger, avec émulateur contrôlé par l'IDE, inspecteur visuel et agent IA.
+
+Dépôt : <https://github.com/Mohameddhiab/plstudio>.
 
 > **Statut : pré-alpha — Phase 0.** Le workspace Cargo, la CI, les crates socles et les ADR existent. L'UI n'est pas encore choisie (ADR 0001). Aucune release n'est publiée.
 
