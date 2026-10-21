@@ -1,0 +1,16 @@
+[package]
+name = "pls-testkit"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+async-trait.workspace = true
+pls-base.workspace = true
+
+[dev-dependencies]
+futures-lite = "2"

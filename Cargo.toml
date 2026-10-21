@@ -1,0 +1,67 @@
+[workspace]
+resolver = "2"
+members = [
+    "apps/plstudio",
+    "apps/plstudio-cli",
+    "crates/pls-base",
+    "crates/pls-text",
+    "crates/pls-sdk",
+    "crates/pls-avd",
+    "crates/pls-project",
+    "crates/pls-lsp",
+    "crates/pls-run",
+    "crates/pls-emulator",
+    "crates/pls-inspector",
+    "crates/pls-agent",
+    "crates/pls-engine",
+    "crates/pls-mcp",
+    "crates/pls-ui",
+    "crates/pls-testkit",
+    "xtask",
+]
+default-members = ["apps/plstudio", "apps/plstudio-cli"]
+
+[workspace.package]
+version = "0.1.0-dev.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+authors = ["plstudio contributors"]
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+dbg_macro = "deny"
+todo = "warn"
+unimplemented = "warn"
+
+[workspace.dependencies]
+async-trait = "0.1"
+directories = "6"
+ropey = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tempfile = "3"
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+pls-base = { path = "crates/pls-base" }
+pls-text = { path = "crates/pls-text" }
+pls-sdk = { path = "crates/pls-sdk" }
+pls-avd = { path = "crates/pls-avd" }
+pls-project = { path = "crates/pls-project" }
+pls-lsp = { path = "crates/pls-lsp" }
+pls-run = { path = "crates/pls-run" }
+pls-emulator = { path = "crates/pls-emulator" }
+pls-inspector = { path = "crates/pls-inspector" }
+pls-agent = { path = "crates/pls-agent" }
+pls-engine = { path = "crates/pls-engine" }
+pls-mcp = { path = "crates/pls-mcp" }
+pls-ui = { path = "crates/pls-ui" }
+pls-testkit = { path = "crates/pls-testkit" }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

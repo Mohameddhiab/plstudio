@@ -1,0 +1,17 @@
+/target
+**/*.rs.bk
+*.pdb
+*.msi
+*.msix
+*.AppImage
+*.deb
+*.rpm
+*.dmg
+*.zip
+.DS_Store
+Thumbs.db
+.env
+.env.*
+.plstudio/
+.idea/
+.vscode/

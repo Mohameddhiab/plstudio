@@ -1,0 +1,13 @@
+[package]
+name = "pls-ui"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+pls-base.workspace = true
+pls-engine.workspace = true
