@@ -17,6 +17,19 @@ Ce dépôt construit **plstudio**, un IDE Rust pour Flutter/Android. Lis d'abord
 - Le thème v0.1 est **sombre uniquement**. FR/EN. Arabe/RTL en v2.
 - Toute dérive se règle par la liste de coupe, jamais en ajoutant une fonctionnalité.
 
+## Méthode de travail
+
+- Toute modification, même mineure, doit devenir un **commit**.
+- Chaque commit est **push** sur `main` après validation des checks.
+- L'agent indique explicitement si on continue ou pas après chaque commit.
+- Un commit = une intention logique, pas une collection hétérogène.
+- Convention : `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`.
+- Avant un commit de code :
+  - `cargo fmt --all`
+  - `cargo xtask layers`
+  - `cargo test --workspace`
+- Pas de commit si les tests échouent.
+
 ## Architecture
 
 - Respecte les couches de `architecture.md` :
