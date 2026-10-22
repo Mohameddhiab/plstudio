@@ -13,7 +13,9 @@ pub mod process;
 pub mod settings;
 pub mod trust;
 
-pub use command::{Cancellation, Command, CommandCtx, CommandId, CommandMeta, CommandOutput};
+pub use command::{
+    Cancellation, Command, CommandCtx, CommandId, CommandMeta, CommandOutput, parse_params,
+};
 pub use danger::DangerLevel;
 pub use error::{ErrorCode, PlsError, Result};
 pub use ids::{JobId, RequestId};

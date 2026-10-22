@@ -7,9 +7,15 @@ use std::{
 };
 
 use async_trait::async_trait;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
-use crate::{danger::DangerLevel, error::Result, ids::JobId, trust::TrustLevel};
+use crate::{
+    danger::DangerLevel,
+    error::{ErrorCode, PlsError, Result},
+    ids::JobId,
+    trust::TrustLevel,
+};
 
 /// Identifiant stable d'une commande (`avd.start`, `engine.jobs`, ...).
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -154,4 +160,26 @@ pub trait Command: Send + Sync {
     fn meta(&self) -> CommandMeta;
 
     async fn run(&self, ctx: &CommandCtx, params: serde_json::Value) -> Result<CommandOutput>;
+}
+
+/// Désérialise les paramètres JSON vers le type typé d'une commande.
+///
+/// Les paramètres sont toujours un objet JSON. Les erreurs de forme passent
+/// par `PLS-E-1004` avec une remédiation explicite.
+pub fn parse_params<T: DeserializeOwned>(params: &serde_json::Value) -> Result<T> {
+    if !params.is_object() {
+        return Err(PlsError::app(
+            ErrorCode::INVALID_PARAMS,
+            "command params must be a JSON object",
+        )
+        .with_remediation("pass an empty object `{}` or the documented param shape"));
+    }
+
+    serde_json::from_value::<T>(params.clone()).map_err(|error| {
+        PlsError::app(
+            ErrorCode::INVALID_PARAMS,
+            format!("invalid command params: {error}"),
+        )
+        .with_remediation("check the command description for the documented param shape")
+    })
 }

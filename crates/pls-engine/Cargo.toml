@@ -11,4 +11,8 @@ workspace = true
 [dependencies]
 async-trait.workspace = true
 pls-base.workspace = true
+serde.workspace = true
 serde_json.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
