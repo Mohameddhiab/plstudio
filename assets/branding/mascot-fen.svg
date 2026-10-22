@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-labelledby="pl-title pl-desc">
+  <title id="pl-title">Fen, the plstudio mascot</title>
+  <desc id="pl-desc">A chibi flat fennec sitting, with big ears and a curled tail.</desc>
+
+  <g transform="translate(0 -31)">
+  <!-- Tail -->
+  <path d="M322 418 C368 420 402 384 406 338" fill="none" stroke="#E7B36A" stroke-width="32" stroke-linecap="round"/>
+  <circle cx="406" cy="338" r="16" fill="#F4E7D3"/>
+
+  <!-- Body -->
+  <path d="M256 322 C210 328 178 358 174 404 C170 446 190 466 214 468 L298 468 C322 466 342 446 338 404 C334 358 302 328 256 322 Z" fill="#E7B36A"/>
+
+  <!-- Neck bulge, fills the gap under the pointed chin -->
+  <ellipse cx="256" cy="328" rx="58" ry="28" fill="#E7B36A"/>
+
+  <ellipse cx="256" cy="434" rx="44" ry="30" fill="#F4E7D3"/>
+  <ellipse cx="216" cy="460" rx="21" ry="12" fill="#F4E7D3"/>
+  <ellipse cx="296" cy="460" rx="21" ry="12" fill="#F4E7D3"/>
+
+  <!-- Head: same language as the brand mark, ears shortened for body proportions -->
+  <g transform="translate(71.7 20) scale(0.72)">
+    <g transform="translate(184 304) scale(0.82) translate(-184 -304)">
+      <path d="M228 270 C220 210 208 142 188 92 C178 70 152 76 146 100 C134 168 148 236 182 306 C198 326 226 312 228 270 Z" fill="#E7B36A"/>
+      <path d="M220 254 C210 202 196 146 176 104 C168 86 150 92 148 112 C142 172 152 230 172 278 C186 296 214 288 220 254 Z" fill="#C96A3D"/>
+    </g>
+    <g transform="translate(512 0) scale(-1 1)">
+      <g transform="translate(184 304) scale(0.82) translate(-184 -304)">
+        <path d="M228 270 C220 210 208 142 188 92 C178 70 152 76 146 100 C134 168 148 236 182 306 C198 326 226 312 228 270 Z" fill="#E7B36A"/>
+        <path d="M220 254 C210 202 196 146 176 104 C168 86 150 92 148 112 C142 172 152 230 172 278 C186 296 214 288 220 254 Z" fill="#C96A3D"/>
+      </g>
+    </g>
+    <path d="M256 240 C238 240 220 244 204 248 C172 260 154 288 154 318 C154 352 178 382 210 402 C232 416 244 426 256 432 C268 426 280 416 302 402 C336 382 360 352 360 318 C360 288 342 260 310 248 C292 244 274 240 256 240 Z" fill="#E7B36A"/>
+    <path d="M256 424 C242 420 230 410 228 394 C226 378 238 366 256 366 C274 366 286 378 284 394 C282 410 270 420 256 424 Z" fill="#F4E7D3"/>
+    <path d="M244 378 Q256 371 268 378 Q265 392 256 393 Q247 392 244 378 Z" fill="#0B0F14"/>
+    <path d="M252 398 Q256 403 260 398" fill="none" stroke="#0B0F14" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="222" cy="296" r="14" fill="#0B0F14"/>
+    <circle cx="217" cy="291" r="4.5" fill="#F4E7D3"/>
+    <circle cx="222" cy="296" r="14" fill="#0B0F14" transform="translate(512 0) scale(-1 1)"/>
+    <circle cx="217" cy="291" r="4.5" fill="#F4E7D3" transform="translate(512 0) scale(-1 1)"/>
+  </g>
+  </g>
+</svg>
