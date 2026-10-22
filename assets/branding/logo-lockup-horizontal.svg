@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1144 512" width="1144" height="512" role="img" aria-labelledby="pl-title pl-desc">
+  <title id="pl-title">plstudio horizontal lockup</title>
+  <desc id="pl-desc">Fennec mark with the plstudio wordmark. Designed for dark surfaces.</desc>
+
+  <g transform="translate(10 5)">
+    <path d="M114 288 L66 336 L114 384" fill="none" stroke="#C96A3D" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M398 288 L446 336 L398 384" fill="none" stroke="#C96A3D" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M228 270 C220 210 208 142 188 92 C178 70 152 76 146 100 C134 168 148 236 182 306 C198 326 226 312 228 270 Z" fill="#E7B36A"/>
+    <path d="M220 254 C210 202 196 146 176 104 C168 86 150 92 148 112 C142 172 152 230 172 278 C186 296 214 288 220 254 Z" fill="#C96A3D"/>
+    <path d="M228 270 C220 210 208 142 188 92 C178 70 152 76 146 100 C134 168 148 236 182 306 C198 326 226 312 228 270 Z" fill="#E7B36A" transform="translate(512 0) scale(-1 1)"/>
+    <path d="M220 254 C210 202 196 146 176 104 C168 86 150 92 148 112 C142 172 152 230 172 278 C186 296 214 288 220 254 Z" fill="#C96A3D" transform="translate(512 0) scale(-1 1)"/>
+    <path d="M256 240 C238 240 220 244 204 248 C172 260 154 288 154 318 C154 352 178 382 210 402 C232 416 244 426 256 432 C268 426 280 416 302 402 C336 382 360 352 360 318 C360 288 342 260 310 248 C292 244 274 240 256 240 Z" fill="#E7B36A"/>
+    <path d="M256 424 C242 420 230 410 228 394 C226 378 238 366 256 366 C274 366 286 378 284 394 C282 410 270 420 256 424 Z" fill="#F4E7D3"/>
+    <path d="M244 378 Q256 371 268 378 Q265 392 256 393 Q247 392 244 378 Z" fill="#0B0F14"/>
+    <path d="M252 398 Q256 403 260 398" fill="none" stroke="#0B0F14" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="222" cy="296" r="14" fill="#0B0F14"/>
+    <circle cx="217" cy="291" r="4.5" fill="#F4E7D3"/>
+    <circle cx="222" cy="296" r="14" fill="#0B0F14" transform="translate(512 0) scale(-1 1)"/>
+    <circle cx="217" cy="291" r="4.5" fill="#F4E7D3" transform="translate(512 0) scale(-1 1)"/>
+  </g>
+
+  <g font-family="Manrope, Inter, 'Segoe UI', system-ui, sans-serif" font-weight="700" font-size="144">
+    <text x="552" y="292" fill="#C96A3D" textLength="116" lengthAdjust="spacing">pl</text>
+    <text x="668" y="292" fill="#F4E7D3" textLength="396" lengthAdjust="spacing">studio</text>
+  </g>
+</svg>
