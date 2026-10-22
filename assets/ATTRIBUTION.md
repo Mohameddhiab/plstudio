@@ -3,6 +3,7 @@
 ## Polices prévues
 
 - **Inter** — SIL Open Font License 1.1.
+- **Manrope** — SIL Open Font License 1.1 (utilisée par le wordmark des lockups et l'attribut `font-family` de `assets/branding/`).
 - **JetBrains Mono** — SIL Open Font License 1.1.
 - **Noto Sans Arabic** — SIL Open Font License 1.1 (v2, RTL).
 
