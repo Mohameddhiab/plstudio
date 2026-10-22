@@ -11,6 +11,7 @@ workspace = true
 [dependencies]
 pls-base.workspace = true
 ropey.workspace = true
+serde.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
