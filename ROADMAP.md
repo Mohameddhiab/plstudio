@@ -18,8 +18,8 @@ La roadmap détaillée, les jalons, les risques et la liste de coupe sont dans *
 - Phase 1 : **socle headless livré à fin HF-1** — moteur (jobs, validation, `engine.jobs`/`engine.cancel`), édition headless ([SPK-01](docs/spikes/SPK-01-edition.md)), CLI `run`/`commands`, **SDK/AVD et `pls-run` en 23/10 :**
   - `pls-sdk` : localisation des toolchains (env, défauts Windows, `cmdline-tools/latest`), `sdk.detect` sans processus.
   - `pls-avd` : `avdmanager` (list/create), `emulator -avd` détaché, `adb devices`, attente de boot annulable, `logcat -d` ; `spawn_detached` ajouté à `ProcessRunner`.
-  - `pls-engine` : `sdk.detect`, `avd.list/create/start/devices/wait/logcat`, `emulator.scrcpy` (20 commandes au registre), état injectable pour tests.
-  - `pls-run` : classification + parsing NDJSON de `flutter run --machine`, événements typés (`app.start/stop/debugPort/progress`, `daemon.exit`), `RunObserver` `Stopped→Starting→Building→Running→Stopping→Exited`.
-- Phase 1 **restant** : streaming réel de `flutter run` (stdin `app.stop`, hot reload) avec le protocole de contrôle, fixtures E2E Windows plus tard.
+  - `pls-engine` : `sdk.detect`, `avd.list/create/start/devices/wait/logcat`, `emulator.scrcpy`, **`run.launch/log/reload/stop/status/detach`** (26 commandes au registre), état injectable pour tests.
+  - `pls-run` : parsing NDJSON de `flutter run --machine` + `RunObserver` (`Stopped→Starting→Building→Running→Stopping→Exited`) et **sessions vivantes** : `ProcessSession` (`spawn_session`, stdout drainable, stdin, kill), `LiveRun` (journal borné, demandes daemon `app.reload`/`app.stop`), registre de sessions partagé côté moteur.
+- Phase 1 **restant** : les flux continus d'événements vers un client (UI) passent par le protocole de contrôle ; fixtures E2E Windows plus tard.
 
 v0.1 : Flutter/Android, Windows d'abord, Linux ensuite. React Native, Kotlin, Java, iOS et Swift sont en v2.
