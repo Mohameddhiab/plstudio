@@ -23,6 +23,7 @@ use serde_json::Value;
 pub mod commands;
 pub mod editor;
 pub mod jobs;
+pub mod toolchain;
 
 pub use editor::{BufferSummary, EditorStore, MatchSpan};
 pub use jobs::{JobError, JobRecord, JobState, JobTable};
@@ -58,12 +59,13 @@ pub struct Engine {
 }
 
 impl Engine {
-    /// Moteur prêt à l'emploi avec les commandes système `engine.*` et les
-    /// commandes d'édition `editor.*`.
+    /// Moteur prêt à l'emploi avec les commandes système `engine.*`,
+    /// `editor.*` et les commandes plateforme `sdk.*`/`avd.*`.
     pub fn new() -> Self {
         let mut engine = Self::default();
         commands::register(&mut engine);
         editor::commands::register(&mut engine);
+        toolchain::register(&mut engine);
         engine
     }
     pub fn register<C: Command + 'static>(&mut self, command: C) {
@@ -215,7 +217,7 @@ mod tests {
             meta: CommandMeta::new("test.echo", "Echo", "test", DangerLevel::Read),
         });
 
-        assert_eq!(engine.command_count(), 12);
+        assert_eq!(engine.command_count(), 20);
         let metas = engine.commands();
         let ids: Vec<&str> = metas.iter().map(|meta| meta.id.as_str()).collect();
         assert!(ids.contains(&"test.echo"));
@@ -229,6 +231,14 @@ mod tests {
         assert!(ids.contains(&"editor.find"));
         assert!(ids.contains(&"editor.list"));
         assert!(ids.contains(&"editor.close"));
+        assert!(ids.contains(&"sdk.detect"));
+        assert!(ids.contains(&"avd.list"));
+        assert!(ids.contains(&"avd.create"));
+        assert!(ids.contains(&"avd.start"));
+        assert!(ids.contains(&"avd.devices"));
+        assert!(ids.contains(&"avd.wait"));
+        assert!(ids.contains(&"avd.logcat"));
+        assert!(ids.contains(&"emulator.scrcpy"));
     }
 
     #[test]

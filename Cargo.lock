@@ -238,7 +238,10 @@ name = "pls-engine"
 version = "0.1.0-dev.0"
 dependencies = [
  "async-trait",
+ "pls-avd",
  "pls-base",
+ "pls-sdk",
+ "pls-testkit",
  "pls-text",
  "serde",
  "serde_json",
