@@ -21,7 +21,7 @@ pub use error::{ErrorCode, PlsError, Result};
 pub use ids::{BufferId, JobId, RequestId};
 pub use paths::PlsPaths;
 pub use process::{
-    DetachedProcess, ProcessOutput, ProcessRunner, ProcessSpec, SystemProcessRunner,
+    DetachedProcess, ProcessOutput, ProcessRunner, ProcessSession, ProcessSpec, SystemProcessRunner,
 };
 pub use settings::SettingsStore;
 pub use trust::TrustLevel;

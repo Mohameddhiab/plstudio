@@ -225,7 +225,8 @@ impl AvdCreateRequest {
 ///
 /// Les arguments sont poussés sans shell, mais des identifiants bornés
 /// évitent déjà les incohérences côté SDK et rendent le diagnostic limpide.
-fn validate_identifier(value: &str, what: &str) -> Result<()> {
+/// Utilisé aussi par `pls-run` pour les identifiants d'appareils.
+pub fn validate_identifier(value: &str, what: &str) -> Result<()> {
     if value.is_empty() {
         return Err(PlsError::app(
             ErrorCode::INVALID_PARAMS,

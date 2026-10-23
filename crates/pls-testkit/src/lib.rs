@@ -4,10 +4,101 @@
 
 #![forbid(unsafe_code)]
 
-use std::sync::{Arc, Mutex, PoisonError};
+use std::{
+    collections::VecDeque,
+    sync::{
+        Arc, Mutex, MutexGuard, PoisonError,
+        atomic::{AtomicBool, Ordering},
+    },
+};
 
 use async_trait::async_trait;
-use pls_base::{DetachedProcess, ProcessOutput, ProcessRunner, ProcessSpec, Result};
+use pls_base::{
+    DetachedProcess, ProcessOutput, ProcessRunner, ProcessSession, ProcessSpec, Result,
+};
+
+/// Session scriptée : lignes à drainer, demandes enregistrées, fin commandée.
+#[derive(Debug)]
+pub struct ScriptedSession {
+    pid: u32,
+    stdout: Mutex<VecDeque<String>>,
+    stderr: Mutex<VecDeque<String>>,
+    written: Mutex<Vec<String>>,
+    status: Mutex<Option<i32>>,
+    killed: AtomicBool,
+}
+
+impl ScriptedSession {
+    pub fn new(stdout_lines: Vec<String>, stderr_lines: Vec<String>) -> Self {
+        Self {
+            pid: 4242,
+            stdout: Mutex::new(stdout_lines.into()),
+            stderr: Mutex::new(stderr_lines.into()),
+            written: Mutex::new(Vec::new()),
+            status: Mutex::new(None),
+            killed: AtomicBool::new(false),
+        }
+    }
+
+    pub fn stdout_lines(lines: Vec<&str>) -> Self {
+        Self::new(lines.into_iter().map(String::from).collect(), Vec::new())
+    }
+
+    /// Lignes écrites sur stdin, dans l'ordre.
+    pub fn written(&self) -> Vec<String> {
+        self.lock(&self.written).clone()
+    }
+
+    /// Force le statut de sortie (processus "terminé").
+    pub fn set_exit(&self, status: i32) {
+        *self.lock(&self.status) = Some(status);
+    }
+
+    pub fn is_killed(&self) -> bool {
+        self.killed.load(Ordering::Relaxed)
+    }
+
+    fn lock<'a, T>(&self, mutex: &'a Mutex<T>) -> MutexGuard<'a, T> {
+        mutex.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    fn drain(&self, queue: &Mutex<VecDeque<String>>) -> Vec<String> {
+        self.lock(queue).drain(..).collect()
+    }
+}
+
+impl ProcessSession for ScriptedSession {
+    fn pid(&self) -> u32 {
+        self.pid
+    }
+
+    fn take_lines(&self) -> Vec<String> {
+        self.drain(&self.stdout)
+    }
+
+    fn take_stderr_lines(&self) -> Vec<String> {
+        self.drain(&self.stderr)
+    }
+
+    fn write_request(&self, line: &str) -> Result<()> {
+        self.lock(&self.written).push(line.to_string());
+        Ok(())
+    }
+
+    fn exit_status(&self) -> Option<i32> {
+        let status = *self.lock(&self.status);
+        // Un kill épinglé vaut code 1, comme la session système.
+        if status.is_none() && self.killed.load(Ordering::Relaxed) {
+            Some(1)
+        } else {
+            status
+        }
+    }
+
+    fn kill(&self) {
+        self.killed.store(true, Ordering::Relaxed);
+    }
+}
 
 /// Runner de processus déterministe.
 #[derive(Debug, Clone)]
@@ -15,6 +106,7 @@ pub struct FakeProcessRunner {
     calls: Arc<Mutex<Vec<ProcessSpec>>>,
     output: ProcessOutput,
 }
+
 impl FakeProcessRunner {
     pub fn new(output: ProcessOutput) -> Self {
         Self {
@@ -62,15 +154,24 @@ impl ProcessRunner for FakeProcessRunner {
 
         Ok(DetachedProcess { pid: 4242 })
     }
+
+    async fn spawn_session(&self, spec: &ProcessSpec) -> Result<Arc<dyn ProcessSession>> {
+        if let Ok(mut calls) = self.calls.lock() {
+            calls.push(spec.clone());
+        }
+
+        Ok(Arc::new(ScriptedSession::new(Vec::new(), Vec::new())))
+    }
 }
 
-/// Runner scripté : renvoie les sorties dans l'ordre, puis répète la dernière.
-///
-/// Pratique pour les sondes répétées (attente de boot Android).
+/// Runner scripté : sorties de `run` en ordre (puis répétition de la
+/// dernière), sessions d'un script de lignes par `spawn_session`.
 #[derive(Debug, Clone)]
 pub struct ScriptedProcessRunner {
     calls: Arc<Mutex<Vec<ProcessSpec>>>,
     outputs: Arc<Mutex<Vec<ProcessOutput>>>,
+    scripts: Arc<Mutex<VecDeque<Vec<String>>>>,
+    spawned: Arc<Mutex<Vec<Arc<ScriptedSession>>>>,
 }
 
 impl ScriptedProcessRunner {
@@ -78,6 +179,8 @@ impl ScriptedProcessRunner {
         Self {
             calls: Arc::new(Mutex::new(Vec::new())),
             outputs: Arc::new(Mutex::new(outputs)),
+            scripts: Arc::new(Mutex::new(VecDeque::new())),
+            spawned: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -94,11 +197,37 @@ impl ScriptedProcessRunner {
         Self::new(outputs)
     }
 
+    /// Session scriptée pour chaque `spawn_session` dans l'ordre.
+    pub fn with_session_scripts(self, scripts: Vec<Vec<String>>) -> Self {
+        if let Ok(mut queued) = self.scripts.lock() {
+            *queued = scripts.into_iter().collect();
+        }
+        self
+    }
+
+    /// Variante texte : scripts de session par lignes littérales.
+    pub fn with_session_text(scripts: Vec<Vec<&str>>) -> Self {
+        let owned = scripts
+            .into_iter()
+            .map(|lines| lines.into_iter().map(String::from).collect())
+            .collect();
+        Self::default().with_session_scripts(owned)
+    }
+
     pub fn calls(&self) -> Vec<ProcessSpec> {
         match self.calls.lock() {
             Ok(calls) => calls.clone(),
             Err(_) => Vec::new(),
         }
+    }
+
+    /// Session du dernier `spawn_session`, pour les assertions.
+    pub fn last_session(&self) -> Option<Arc<ScriptedSession>> {
+        self.lock(&self.spawned).last().cloned()
+    }
+
+    fn lock<'a, T>(&self, mutex: &'a Mutex<T>) -> MutexGuard<'a, T> {
+        mutex.lock().unwrap_or_else(PoisonError::into_inner)
     }
 }
 
@@ -115,7 +244,7 @@ impl ProcessRunner for ScriptedProcessRunner {
             calls.push(spec.clone());
         }
 
-        let mut outputs = self.outputs.lock().unwrap_or_else(PoisonError::into_inner);
+        let mut outputs = self.lock(&self.outputs);
         match outputs.len() {
             0 => Ok(ProcessOutput {
                 status: None,
@@ -139,6 +268,18 @@ impl ProcessRunner for ScriptedProcessRunner {
         }
 
         Ok(DetachedProcess { pid: 4242 })
+    }
+
+    async fn spawn_session(&self, spec: &ProcessSpec) -> Result<Arc<dyn ProcessSession>> {
+        if let Ok(mut calls) = self.calls.lock() {
+            calls.push(spec.clone());
+        }
+
+        let lines = self.lock(&self.scripts).pop_front().unwrap_or_default();
+        let session = Arc::new(ScriptedSession::new(lines, Vec::new()));
+        self.lock(&self.spawned).push(session.clone());
+
+        Ok(session)
     }
 }
 
@@ -183,14 +324,41 @@ emulator-5556\toffline\n\
 #[cfg(test)]
 mod tests {
     use super::*;
+    use futures_lite::future::block_on;
 
     #[test]
     fn fake_records_calls_and_returns_output() {
         let runner = FakeProcessRunner::succeeding("ok");
         let spec = ProcessSpec::new("adb").arg("devices");
 
-        let output = futures_lite::future::block_on(runner.run(&spec)).expect("run");
+        let output = block_on(runner.run(&spec)).expect("run");
         assert!(output.success());
         assert_eq!(runner.calls().len(), 1);
+    }
+
+    #[test]
+    fn scripted_sessions_drain_then_record_requests() {
+        let runner = ScriptedProcessRunner::with_session_text(vec![vec![
+            "{\"event\":\"daemon.initialized\"}",
+            "{\"event\":\"app.start\",\"params\":{\"appId\":\"demo\"}}",
+        ]]);
+
+        let session = block_on(runner.spawn_session(&ProcessSpec::new("flutter"))).expect("spawn");
+        assert_eq!(session.take_lines().len(), 2);
+        assert!(session.take_lines().is_empty(), "drained once");
+
+        session
+            .write_request("{\"id\":1,\"method\":\"app.reload\"}")
+            .expect("request");
+        session.kill();
+
+        let scripted = runner.last_session().expect("spawned");
+        assert_eq!(
+            scripted.written(),
+            vec!["{\"id\":1,\"method\":\"app.reload\"}".to_string()]
+        );
+        assert!(scripted.is_killed());
+        assert_eq!(scripted.exit_status(), Some(1));
+        assert_eq!(session.pid(), 4242);
     }
 }

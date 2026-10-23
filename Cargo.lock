@@ -223,6 +223,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "thiserror",
+ "tokio",
  "tracing",
 ]
 
@@ -283,10 +284,12 @@ dependencies = [
 name = "pls-run"
 version = "0.1.0-dev.0"
 dependencies = [
+ "pls-avd",
  "pls-base",
  "pls-testkit",
  "serde",
  "serde_json",
+ "tokio",
 ]
 
 [[package]]

@@ -1,16 +1,17 @@
 //! Cycle de vie d'une session `flutter run --machine`.
 //!
-//! Phase 1 : classification des lignes de sortie, événements typés et
-//! observateur d'état, le tout pur (testé sur les fixtures de
-//! `pls-testkit`). Le streaming du processus réel et l'interaction
-//! (`app.stop`, hot reload) arrivent avec le protocole de contrôle ; ce
-//! module en fixe le modèle, testé sur des sessions réelles figées.
+//! Phase 1 : modélisation (fixtures de `pls-testkit`) + pilotage réel
+//! ([`live::LiveRun`]) — stdout drainable, demandes stdin, kill. Le
+//! protocole de contrôle exposera ces sessions à la UI ; ici le moteur
+//! les tient déjà, headless.
 
 #![forbid(unsafe_code)]
 
 use pls_base::{ErrorCode, PlsError, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+
+pub mod live;
 
 /// Ligne NDJSON du daemon flutter.
 ///
