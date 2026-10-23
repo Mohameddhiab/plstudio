@@ -142,8 +142,19 @@ impl ProcessRunner for ScriptedProcessRunner {
     }
 }
 
-pub const FLUTTER_RUN_MACHINE: &str = r#"{"event":"app.start","params":{"appId":"demo","deviceId":"emulator-5554"}}
-{"event":"app.log","params":{"log":"Hello plstudio"}}
+pub const FLUTTER_RUN_MACHINE: &str = r#"
+{"event":"daemon.initialized","params":{"version":"0.0.0"}}
+{"event":"daemon.logMessage","params":{"level":"info","message":"flutter run --machine sur pixel_7_api_34"}}
+{"event":"app.progress","params":{"id":"1","message":"Launching lib/main.dart on emulator-5554","finished":false}}
+{"event":"app.start","params":{"appId":"com.example.demo","deviceId":"emulator-5554","directory":"/repo/demo"}}
+{"event":"app.progress","params":{"id":"1","message":"Running Gradle task 'assembleDebug'","finished":false}}
+{"event":"app.debugPort","params":{"wsUri":"ws://127.0.0.1:51234/DSfY=","port":51234}}
+{"event":"app.log","params":{"log":"A Dart VM Service on Pixel 7 API 34 is available at: http://127.0.0.1:45671/xyz=/"}}
+{"event":"app.progress","params":{"id":"1","finished":true}}
+Waiting for another flutter command to release the startup lock.
+{"event":"daemon.logMessage","params":{"level":"warning","message":"memory pressure on the emulator"}}
+{"event":"app.stop","params":{"appId":"com.example.demo"}}
+{"event":"daemon.exit","params":{"code":0}}
 "#;
 
 pub const LOGCAT_THREADTIME: &str = "10-21 12:01:00.123  1234  5678 I flutter : Hello\n";

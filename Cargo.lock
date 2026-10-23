@@ -283,7 +283,10 @@ dependencies = [
 name = "pls-run"
 version = "0.1.0-dev.0"
 dependencies = [
+ "pls-base",
+ "pls-testkit",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
