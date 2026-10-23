@@ -9,4 +9,9 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+pls-base.workspace = true
 serde.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+pls-testkit.workspace = true

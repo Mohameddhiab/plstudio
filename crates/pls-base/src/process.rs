@@ -58,18 +58,47 @@ impl ProcessSpec {
 #[async_trait]
 pub trait ProcessRunner: Send + Sync {
     async fn run(&self, spec: &ProcessSpec) -> Result<ProcessOutput>;
+
+    /// Lance un processus indépendant du cycle de vie de plstudio
+    /// (émulateur, scrcpy). Le pid seul est retourné : le handle est
+    /// volontairement abandonné, tuer l'UI ne doit pas tuer l'émulateur.
+    async fn spawn_detached(&self, spec: &ProcessSpec) -> Result<DetachedProcess>;
+}
+
+/// Processus détaché, identifié par son pid.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DetachedProcess {
+    pub pid: u32,
 }
 
 /// Implémentation système minimale.
 ///
-/// Elle est volontairement bloquante en Phase 0 ; l'exécution tokio et
-/// l'annulation arrivent avec la Phase 1.
+/// `run` est bloquant (processus courts) ; les flux longs (flutter run)
+/// passeront par le protocole de contrôle.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct SystemProcessRunner;
 
 #[async_trait]
 impl ProcessRunner for SystemProcessRunner {
     async fn run(&self, spec: &ProcessSpec) -> Result<ProcessOutput> {
+        let output = self.system_command(spec)?.output()?;
+
+        Ok(ProcessOutput {
+            status: output.status.code(),
+            stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
+            stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+        })
+    }
+
+    async fn spawn_detached(&self, spec: &ProcessSpec) -> Result<DetachedProcess> {
+        let child = self.system_command(spec)?.spawn()?;
+
+        Ok(DetachedProcess { pid: child.id() })
+    }
+}
+
+impl SystemProcessRunner {
+    fn system_command(&self, spec: &ProcessSpec) -> Result<StdCommand> {
         let mut command = StdCommand::new(&spec.program);
         command.args(&spec.args);
 
@@ -81,12 +110,6 @@ impl ProcessRunner for SystemProcessRunner {
             command.env(key, value);
         }
 
-        let output = command.output()?;
-
-        Ok(ProcessOutput {
-            status: output.status.code(),
-            stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
-            stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
-        })
+        Ok(command)
     }
 }

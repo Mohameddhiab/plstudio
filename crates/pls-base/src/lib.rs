@@ -20,7 +20,9 @@ pub use danger::DangerLevel;
 pub use error::{ErrorCode, PlsError, Result};
 pub use ids::{BufferId, JobId, RequestId};
 pub use paths::PlsPaths;
-pub use process::{ProcessOutput, ProcessRunner, ProcessSpec, SystemProcessRunner};
+pub use process::{
+    DetachedProcess, ProcessOutput, ProcessRunner, ProcessSpec, SystemProcessRunner,
+};
 pub use settings::SettingsStore;
 pub use trust::TrustLevel;
 
