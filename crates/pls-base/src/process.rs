@@ -119,6 +119,9 @@ pub trait ProcessSession: Send + Sync + std::fmt::Debug {
     fn write_request(&self, line: &str) -> Result<()>;
 
     /// Code de sortie une fois le processus terminé ; `None` tant qu'il vit.
+    ///
+    /// Invariant : dès que le statut est `Some`, tout le flux (stdout et
+    /// stderr) a été poussé et est récupérable par les drains.
     fn exit_status(&self) -> Option<i32>;
 
     /// Coupe le processus ; le statut devient non nul après coup.
@@ -174,18 +177,24 @@ impl ProcessRunner for SystemProcessRunner {
             killed: AtomicBool::new(false),
         });
 
-        // Un finaliseur : pose le statut de sortie quand les pipes ferment.
-        let finalizer_session = session.clone();
-        thread::spawn(move || wait_for_exit(finalizer_session.as_ref()));
-
+        // Lecteurs d'abord : le finaliseur les joindra avant de poser le
+        // statut, pour garantir « statut posé ⇒ tout le flux est drainé ».
+        let mut readers = Vec::new();
         if let Some(stdout_pipe) = stdout {
             let session = session.clone();
-            thread::spawn(move || read_pipe(stdout_pipe, session.as_ref(), Queue::Stdout));
+            readers.push(thread::spawn(move || {
+                read_pipe(stdout_pipe, session.as_ref(), Queue::Stdout)
+            }));
         }
         if let Some(stderr_pipe) = stderr {
             let session = session.clone();
-            thread::spawn(move || read_pipe(stderr_pipe, session.as_ref(), Queue::Stderr));
+            readers.push(thread::spawn(move || {
+                read_pipe(stderr_pipe, session.as_ref(), Queue::Stderr)
+            }));
         }
+
+        let finalizer_session = session.clone();
+        thread::spawn(move || wait_for_exit(finalizer_session, readers));
 
         Ok(session)
     }
@@ -324,24 +333,41 @@ fn read_pipe(pipe: impl std::io::Read + Send + 'static, session: &ChildSession, 
     }
 }
 
-/// Attend la fin du processus sans bloquer le kill :
-/// prend la possession du `Child` puis attend hors du mutex.
-fn wait_for_exit(session: &ChildSession) {
-    loop {
-        if session.exit_status().is_some() {
-            return;
-        }
-
-        let taken = session.lock(&session.child).take();
-        match taken {
-            Some(mut child) => {
-                let status = child.wait().ok().and_then(|status| status.code());
-                session.set_status(status);
-                return;
+/// Finalise une session en trois temps :
+///
+/// 1. prend la possession du `Child` (plus de kill direct : le drapeau
+///    `killed` est honoré par la boucle d'attente) ;
+/// 2. joint les lecteurs, qui se terminent au EOF des pipes — toutes les
+///    lignes sont donc déjà dans les tampons ;
+/// 3. pose le statut.
+///
+/// Invariant offert aux consommateurs : dès que `exit_status()` répond
+/// `Some`, `take_lines`/`take_stderr_lines` retournent le flux complet.
+/// Avant ce correctif, le statut pouvait passer `Some` avant que les
+/// lecteurs aient poussé les dernières lignes (course observée sur
+/// Linux : l'écho perdu, la session « finie » avec un journal vide).
+fn wait_for_exit(session: Arc<ChildSession>, readers: Vec<thread::JoinHandle<()>>) {
+    let taken = session.lock(&session.child).take();
+    let status = match taken {
+        Some(mut child) => loop {
+            if session.killed.load(Ordering::Relaxed) {
+                let _ignored = child.kill();
             }
-            None => thread::sleep(Duration::from_millis(10)),
-        }
+
+            match child.try_wait() {
+                Ok(Some(status)) => break status.code(),
+                Ok(None) => thread::sleep(Duration::from_millis(10)),
+                Err(_) => break None,
+            }
+        },
+        None => session.exit_status(), // déjà finalisée par un tiers.
+    };
+
+    for reader in readers {
+        let _ignored = reader.join();
     }
+
+    session.set_status(status);
 }
 
 #[cfg(test)]
