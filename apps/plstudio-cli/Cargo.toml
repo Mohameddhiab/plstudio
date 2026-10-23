@@ -11,3 +11,5 @@ workspace = true
 [dependencies]
 pls-base.workspace = true
 pls-engine.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
