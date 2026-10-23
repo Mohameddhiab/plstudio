@@ -241,6 +241,7 @@ dependencies = [
  "async-trait",
  "pls-avd",
  "pls-base",
+ "pls-run",
  "pls-sdk",
  "pls-testkit",
  "pls-text",

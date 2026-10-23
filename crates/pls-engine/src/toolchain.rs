@@ -27,8 +27,12 @@ pub struct ToolchainState {
     pub avdmanager: Option<PathBuf>,
     pub adb: Option<PathBuf>,
     pub emulator: Option<PathBuf>,
+    /// FLUTTER_ROOT ou PATH ; requis par `run.launch`.
+    pub flutter: Option<PathBuf>,
     /// Détecté via PATH seulement ; plstudio n'installe rien.
     pub scrcpy: Option<PathBuf>,
+    /// Sessions de run vivantes, partagées entre commandes `run.*`.
+    pub runs: crate::runs::RunRegistry,
 }
 
 impl std::fmt::Debug for ToolchainState {
@@ -39,6 +43,7 @@ impl std::fmt::Debug for ToolchainState {
             .field("avdmanager", &self.avdmanager)
             .field("adb", &self.adb)
             .field("emulator", &self.emulator)
+            .field("flutter", &self.flutter)
             .field("scrcpy", &self.scrcpy)
             .finish()
     }
@@ -55,9 +60,15 @@ impl ToolchainState {
             avdmanager: report.avdmanager.clone(),
             adb: report.adb.clone(),
             emulator: report.emulator.clone(),
+            flutter: report.flutter.clone(),
             scrcpy,
             report,
+            runs: crate::runs::RunRegistry::default(),
         }
+    }
+
+    pub fn flutter(&self) -> Result<PathBuf> {
+        self.tool("flutter", self.flutter.as_ref())
     }
 
     pub fn avdmanager(&self) -> Result<PathBuf> {
@@ -86,12 +97,7 @@ impl ToolchainState {
     }
 }
 
-/// Enregistre les commandes plateforme avec la résolution système réelle.
-pub fn register(engine: &mut crate::Engine) {
-    register_with(engine, Arc::new(ToolchainState::detect_system()));
-}
-
-/// Enregistre les commandes plateforme avec une résolution injectée (tests).
+/// Enregistre les commandes plateforme avec une résolution injectée.
 ///
 /// Les identifiants écrasent toute résolution précédente : le dernier
 /// enregistrement gagne, ce qui permet aux bins/UX d'imposer des outils.
@@ -492,7 +498,9 @@ mod tests {
             avdmanager: Some(PathBuf::from("avdmanager")),
             adb: Some(PathBuf::from("adb")),
             emulator: Some(PathBuf::from("emulator")),
+            flutter: None,
             scrcpy: Some(PathBuf::from("scrcpy")),
+            runs: crate::runs::RunRegistry::default(),
         };
         (state, runner)
     }
@@ -533,7 +541,9 @@ mod tests {
             avdmanager: None,
             adb: None,
             emulator: None,
+            flutter: None,
             scrcpy: None,
+            runs: crate::runs::RunRegistry::default(),
         };
         let engine = engine_with(state);
 
@@ -552,7 +562,9 @@ mod tests {
             avdmanager: None,
             adb: Some(PathBuf::from("adb")),
             emulator: None,
+            flutter: None,
             scrcpy: None,
+            runs: crate::runs::RunRegistry::default(),
         };
         let engine = engine_with(state);
 

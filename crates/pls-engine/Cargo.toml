@@ -12,12 +12,13 @@ workspace = true
 async-trait.workspace = true
 pls-avd.workspace = true
 pls-base.workspace = true
+pls-run.workspace = true
 pls-sdk.workspace = true
 pls-text.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+tokio.workspace = true
 
 [dev-dependencies]
 pls-testkit.workspace = true
 tempfile.workspace = true
-tokio.workspace = true

@@ -23,6 +23,7 @@ use serde_json::Value;
 pub mod commands;
 pub mod editor;
 pub mod jobs;
+pub mod runs;
 pub mod toolchain;
 
 pub use editor::{BufferSummary, EditorStore, MatchSpan};
@@ -60,12 +61,17 @@ pub struct Engine {
 
 impl Engine {
     /// Moteur prêt à l'emploi avec les commandes système `engine.*`,
-    /// `editor.*` et les commandes plateforme `sdk.*`/`avd.*`.
+    /// `editor.*` et les commandes plateforme `sdk.*`/`avd.*`/`run.*`.
     pub fn new() -> Self {
         let mut engine = Self::default();
         commands::register(&mut engine);
         editor::commands::register(&mut engine);
-        toolchain::register(&mut engine);
+
+        // Un unique ToolchainState : un seul résolveur d'outils partagé
+        // entre les commandes plateforme et les sessions de run.
+        let state = Arc::new(toolchain::ToolchainState::detect_system());
+        toolchain::register_with(&mut engine, state.clone());
+        runs::register_with(&mut engine, state);
         engine
     }
     pub fn register<C: Command + 'static>(&mut self, command: C) {
@@ -217,7 +223,7 @@ mod tests {
             meta: CommandMeta::new("test.echo", "Echo", "test", DangerLevel::Read),
         });
 
-        assert_eq!(engine.command_count(), 20);
+        assert_eq!(engine.command_count(), 26);
         let metas = engine.commands();
         let ids: Vec<&str> = metas.iter().map(|meta| meta.id.as_str()).collect();
         assert!(ids.contains(&"test.echo"));
@@ -239,6 +245,12 @@ mod tests {
         assert!(ids.contains(&"avd.wait"));
         assert!(ids.contains(&"avd.logcat"));
         assert!(ids.contains(&"emulator.scrcpy"));
+        assert!(ids.contains(&"run.launch"));
+        assert!(ids.contains(&"run.log"));
+        assert!(ids.contains(&"run.reload"));
+        assert!(ids.contains(&"run.stop"));
+        assert!(ids.contains(&"run.status"));
+        assert!(ids.contains(&"run.detach"));
     }
 
     #[test]

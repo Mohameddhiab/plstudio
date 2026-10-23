@@ -13,6 +13,8 @@ use serde_json::Value;
 
 pub mod live;
 
+pub use live::LiveRun;
+
 /// Ligne NDJSON du daemon flutter.
 ///
 /// `params` reste brut et est typé à la demande (`params_as`) : flutter
