@@ -10,3 +10,6 @@ workspace = true
 
 [dependencies]
 serde.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
