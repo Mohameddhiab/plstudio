@@ -225,6 +225,11 @@ impl TextBuffer {
         self.rope.to_string()
     }
 
+    /// Vue en lecture sur la rope ; les conversions `Position` s'en servent.
+    pub fn rope(&self) -> &Rope {
+        &self.rope
+    }
+
     pub fn line(&self, line_index: usize) -> Option<String> {
         if line_index >= self.rope.len_lines() {
             return None;

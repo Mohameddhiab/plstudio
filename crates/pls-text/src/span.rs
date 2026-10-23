@@ -14,6 +14,11 @@ pub struct CharSpan {
 }
 
 impl CharSpan {
+    /// Tranche complète explicite (`end` exclusif).
+    pub const fn new(start: usize, end: usize) -> Self {
+        Self { start, end }
+    }
+
     /// Tranche d'insertion pure : `[index, index)` (aucun caractère supprimé).
     pub fn empty_at(index: usize) -> Self {
         Self {

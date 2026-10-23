@@ -18,7 +18,7 @@ pub use command::{
 };
 pub use danger::DangerLevel;
 pub use error::{ErrorCode, PlsError, Result};
-pub use ids::{JobId, RequestId};
+pub use ids::{BufferId, JobId, RequestId};
 pub use paths::PlsPaths;
 pub use process::{ProcessOutput, ProcessRunner, ProcessSpec, SystemProcessRunner};
 pub use settings::SettingsStore;

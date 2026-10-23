@@ -21,8 +21,10 @@ use pls_base::{
 use serde_json::Value;
 
 pub mod commands;
+pub mod editor;
 pub mod jobs;
 
+pub use editor::{BufferSummary, EditorStore, MatchSpan};
 pub use jobs::{JobError, JobRecord, JobState, JobTable};
 
 /// Générateur monotone de jobs.
@@ -52,18 +54,18 @@ pub struct Engine {
     /// mutations passent par `register`, réservé à la construction.
     commands: BTreeMap<CommandId, Box<dyn Command>>,
     job_ids: JobRegistry,
-    job_table: Arc<JobTable>,
+    pub(crate) job_table: Arc<JobTable>,
 }
 
 impl Engine {
-    /// Moteur prêt à l'emploi avec les commandes système `engine.*`.
+    /// Moteur prêt à l'emploi avec les commandes système `engine.*` et les
+    /// commandes d'édition `editor.*`.
     pub fn new() -> Self {
         let mut engine = Self::default();
-        engine.register(commands::JobsCommand::new(engine.job_table.clone()));
-        engine.register(commands::CancelCommand::new(engine.job_table.clone()));
+        commands::register(&mut engine);
+        editor::commands::register(&mut engine);
         engine
     }
-
     pub fn register<C: Command + 'static>(&mut self, command: C) {
         let id = command.meta().id;
         self.commands.insert(id, Box::new(command));
@@ -213,12 +215,20 @@ mod tests {
             meta: CommandMeta::new("test.echo", "Echo", "test", DangerLevel::Read),
         });
 
-        assert_eq!(engine.command_count(), 3);
+        assert_eq!(engine.command_count(), 12);
         let metas = engine.commands();
         let ids: Vec<&str> = metas.iter().map(|meta| meta.id.as_str()).collect();
         assert!(ids.contains(&"test.echo"));
         assert!(ids.contains(&"engine.jobs"));
         assert!(ids.contains(&"engine.cancel"));
+        assert!(ids.contains(&"editor.open"));
+        assert!(ids.contains(&"editor.edit"));
+        assert!(ids.contains(&"editor.undo"));
+        assert!(ids.contains(&"editor.redo"));
+        assert!(ids.contains(&"editor.save"));
+        assert!(ids.contains(&"editor.find"));
+        assert!(ids.contains(&"editor.list"));
+        assert!(ids.contains(&"editor.close"));
     }
 
     #[test]

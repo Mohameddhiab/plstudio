@@ -22,6 +22,29 @@ impl fmt::Display for JobId {
     }
 }
 
+/// Identifiant d'un buffer ouvert dans l'éditeur.
+///
+/// Type partagé entre le moteur et l'UI ; les buffers vivent dans
+/// `pls-engine` et survivent aux commandes individuelles.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct BufferId(u64);
+
+impl BufferId {
+    pub const fn new(raw: u64) -> Self {
+        Self(raw)
+    }
+
+    pub const fn get(self) -> u64 {
+        self.0
+    }
+}
+
+impl fmt::Display for BufferId {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "buffer-{}", self.0)
+    }
+}
+
 /// Identifiant d'une requête cliente, pour corréler les réponses.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct RequestId(String);

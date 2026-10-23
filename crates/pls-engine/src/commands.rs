@@ -11,7 +11,14 @@ use pls_base::{Command, CommandCtx, CommandMeta, CommandOutput, DangerLevel, Job
 use serde::Deserialize;
 use serde_json::Value;
 
+use crate::Engine;
 use crate::jobs::JobTable;
+
+/// Enregistre les commandes système sur le moteur en construction.
+pub fn register(engine: &mut Engine) {
+    engine.register(JobsCommand::new(engine.job_table.clone()));
+    engine.register(CancelCommand::new(engine.job_table.clone()));
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
