@@ -1,16 +1,19 @@
 //! CLI headless de plstudio.
 //!
 //! Toute action passe par le moteur : `run --cmd <id> --param '{...}'`
-//! exécute une commande et renvoie son résultat JSON. Le protocole de
-//! contrôle longue durée et MCP arrivent dans les phases suivantes.
+//! exécute une commande et renvoie son résultat JSON. `serve` héberge le
+//! canal de contrôle longue durée (`plstudio-control/1`) sur TCP local ;
+//! MCP arrive dans les phases suivantes.
 
 #![forbid(unsafe_code)]
 
-use std::{env, path::PathBuf, process::ExitCode};
+use std::{env, path::PathBuf, process::ExitCode, sync::Arc};
 
 use pls_base::{CommandCtx, CommandId, ErrorCode, PlsError, TrustLevel};
+use pls_control::{ControlServer, ControlToken, PROTOCOL, SessionPolicy, run_until_signal};
 use pls_engine::Engine;
 use serde_json::{Value, json};
+use tokio::net::TcpListener;
 
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -25,6 +28,7 @@ fn main() -> ExitCode {
             list_commands(as_json)
         }
         Some("run") => run_command(&args[1..]),
+        Some("serve") => serve_command(&args[1..]),
         Some("--help" | "-h" | "help") | None => {
             print_help();
             ExitCode::SUCCESS
@@ -113,6 +117,207 @@ fn run_command(args: &[String]) -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+/// Spec parsée de `serve` : héberger le canal de contrôle TCP local.
+#[derive(Debug)]
+struct ServeSpec {
+    port: u16,
+    workspace: PathBuf,
+    trust: TrustLevel,
+    token_file: Option<PathBuf>,
+}
+
+/// `serve [--port n] [--workspace dir] [--trust level] [--token-file path]`
+///
+/// Le port par défaut est éphémère (0) ; la confiance par défaut est
+/// `restricted` : contrairement à `run --trust trusted`, le canal sert
+/// potentiellement un client distant (même en loopback), le filet
+/// lecture-seule est donc le défaut documenté.
+fn serve_command(args: &[String]) -> ExitCode {
+    let spec = match parse_serve_args(args) {
+        Ok(spec) => spec,
+        Err(usage_error) => {
+            eprintln!("{usage_error}");
+            print_serve_usage();
+            return ExitCode::from(2);
+        }
+    };
+    let ServeSpec {
+        port,
+        workspace,
+        trust,
+        token_file,
+    } = spec;
+
+    // Audit du canal sur stderr (RUST_LOG pour l'affiner) ; la seule ligne
+    // machine sur stdout reste l'annonce du serveur, sans aucun secret.
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+        )
+        .with_writer(std::io::stderr)
+        .init();
+
+    let token = match ControlToken::generate() {
+        Ok(token) => token,
+        Err(error) => {
+            eprint_json(&error_payload(&error));
+            return ExitCode::FAILURE;
+        }
+    };
+
+    let token_path = token_file.unwrap_or_else(default_token_file);
+    if let Err(error) = write_token_file(&token_path, token.as_hex()) {
+        eprint_json(&error_payload(&PlsError::app(
+            ErrorCode::CONFIG,
+            format!("cannot write the session token file: {error}"),
+        )));
+        return ExitCode::FAILURE;
+    }
+
+    let runtime = match tokio::runtime::Runtime::new() {
+        Ok(runtime) => runtime,
+        Err(error) => {
+            eprint_json(&error_payload(&PlsError::app(
+                ErrorCode::COMMAND,
+                format!("failed to start the async runtime: {error}"),
+            )));
+            return ExitCode::FAILURE;
+        }
+    };
+
+    runtime.block_on(async move {
+        let listener = match TcpListener::bind(("127.0.0.1", port)).await {
+            Ok(listener) => listener,
+            Err(error) => {
+                eprint_json(&error_payload(&PlsError::app(
+                    ErrorCode::CONFIG,
+                    format!("cannot bind the control channel on 127.0.0.1:{port}: {error}"),
+                )));
+                return ExitCode::FAILURE;
+            }
+        };
+        let bound_port = listener
+            .local_addr()
+            .map(|addr| addr.port())
+            .unwrap_or(port);
+
+        // Une seule ligne JSON lisible par la machine : le fichier de token
+        // porte le secret ; la sortie standard n'en contient aucun.
+        println!(
+            "{}",
+            pretty(&json!({
+                "protocol": PROTOCOL,
+                "port": bound_port,
+                "token_file": token_path.to_string_lossy(),
+                "workspace": workspace.to_string_lossy(),
+                "trust": if trust.is_trusted() { "trusted" } else { "restricted" },
+            }))
+        );
+
+        let server = Arc::new(ControlServer::new(
+            Arc::new(Engine::new()),
+            SessionPolicy { workspace, trust },
+            token,
+        ));
+
+        match run_until_signal(listener, server).await {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(error) => {
+                eprint_json(&error_payload(&error));
+                ExitCode::FAILURE
+            }
+        }
+    })
+}
+
+/// Parse les arguments de `serve` ; usage en cas d'erreur.
+fn parse_serve_args(args: &[String]) -> Result<ServeSpec, String> {
+    let mut port = 0;
+    let mut workspace = PathBuf::from(".");
+    let mut trust = TrustLevel::Restricted;
+    let mut token_file: Option<PathBuf> = None;
+
+    let mut index = 0;
+    while index < args.len() {
+        let value = args
+            .get(index + 1)
+            .ok_or_else(|| format!("missing value after {}", args[index]))?;
+
+        match args[index].as_str() {
+            "--port" => {
+                port = value
+                    .parse::<u16>()
+                    .map_err(|error| format!("--port expects a number 0..=65535: {error}"))?;
+            }
+            "--workspace" => workspace = PathBuf::from(value),
+            "--trust" => {
+                trust = match value.as_str() {
+                    "trusted" => TrustLevel::Trusted,
+                    "restricted" => TrustLevel::Restricted,
+                    other => {
+                        return Err(format!(
+                            "unknown trust level: {other} (expected trusted|restricted)"
+                        ));
+                    }
+                };
+            }
+            "--token-file" => token_file = Some(PathBuf::from(value)),
+            other_flag => return Err(format!("unknown `serve` flag: {other_flag}")),
+        }
+
+        index += 2;
+    }
+
+    Ok(ServeSpec {
+        port,
+        workspace,
+        trust,
+        token_file,
+    })
+}
+
+/// Chemin du fichier de token par défaut, hors projet :
+/// `%LOCALAPPDATA%\plstudio\control\cli-<pid>.token` (Windows) ou
+/// l'équivalent XDG data dir ailleurs.
+fn default_token_file() -> PathBuf {
+    let base = directories::BaseDirs::new()
+        .map(|dirs| dirs.data_local_dir().to_path_buf())
+        .unwrap_or_else(|| PathBuf::from("."));
+
+    base.join("plstudio")
+        .join("control")
+        .join(format!("cli-{}.token", std::process::id()))
+}
+
+/// Écrit le token (une ligne hexadécimale) et restreint ses permissions
+/// sur les systèmes qui savent le faire.
+fn write_token_file(path: &std::path::Path, token: &str) -> std::io::Result<()> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    std::fs::write(path, format!("{token}\n"))?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        let mut permissions = std::fs::metadata(path)?.permissions();
+        permissions.set_mode(0o600);
+        std::fs::set_permissions(path, permissions)?;
+    }
+
+    Ok(())
+}
+
+fn print_serve_usage() {
+    println!("USAGE:");
+    println!(
+        "    plstudio-cli serve [--port n] [--workspace dir] [--trust trusted|restricted] [--token-file path]"
+    );
 }
 
 /// Parse les arguments de `run` ; renvoie un message d'usage en cas d'erreur.
@@ -227,6 +432,7 @@ fn print_help() {
     println!();
     println!("SUBCOMMANDS:");
     println!("    run         Execute an engine command");
+    println!("    serve       Host the plstudio-control/1 channel on local TCP");
     println!("    commands    List registered commands");
     println!("    version     Print the version");
     println!("    help        Print this help");
@@ -289,6 +495,54 @@ mod tests {
             parse_run_args(&["--cmd".into(), "x".into(), "--trust".into(), "gamma".into()])
                 .is_err()
         );
+    }
+
+    #[test]
+    fn serve_args_default_to_ephemeral_and_restricted() {
+        let spec = parse_serve_args(&[]).expect("empty args parse");
+
+        assert_eq!(spec.port, 0, "ephemeral port by default");
+        assert_eq!(spec.workspace, PathBuf::from("."));
+        assert!(
+            !spec.trust.is_trusted(),
+            "the channel defaults to read-only sessions"
+        );
+        assert!(
+            spec.token_file.is_none(),
+            "defaults to the platform token path"
+        );
+    }
+
+    #[test]
+    fn serve_args_parse_all_flags() {
+        let spec = parse_serve_args(&[
+            "--port".into(),
+            "9320".into(),
+            "--workspace".into(),
+            "C:\\projects\\demo".into(),
+            "--trust".into(),
+            "trusted".into(),
+            "--token-file".into(),
+            "secret.token".into(),
+        ])
+        .expect("parses");
+
+        assert_eq!(spec.port, 9320);
+        assert_eq!(spec.workspace, PathBuf::from("C:\\projects\\demo"));
+        assert!(spec.trust.is_trusted());
+        assert_eq!(spec.token_file, Some(PathBuf::from("secret.token")));
+    }
+
+    #[test]
+    fn serve_args_reject_bad_usage() {
+        // Port non numérique.
+        assert!(parse_serve_args(&["--port".into(), "seven".into()]).is_err());
+        // Confiance inconnue.
+        assert!(parse_serve_args(&["--trust".into(), "gamma".into()]).is_err());
+        // Flag inconnu.
+        assert!(parse_serve_args(&["--yolo".into(), "1".into()]).is_err());
+        // Valeur manquante.
+        assert!(parse_serve_args(&["--port".into()]).is_err());
     }
 
     #[test]

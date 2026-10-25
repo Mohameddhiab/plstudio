@@ -15,6 +15,7 @@ const LAYERS: &[(&str, u8)] = &[
     ("pls-inspector", 3),
     ("pls-agent", 3),
     ("pls-engine", 4),
+    ("pls-control", 5),
     ("pls-mcp", 5),
     ("pls-ui", 5),
     ("plstudio", 6),

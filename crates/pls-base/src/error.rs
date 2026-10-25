@@ -16,6 +16,15 @@ impl ErrorCode {
     pub const CANCELLED: Self = Self("PLS-E-1007");
     pub const LAYER: Self = Self("PLS-E-2001");
 
+    /// Canal de contrôle (`plstudio-control/1`, voir docs/control-protocol.md).
+    pub const CONTROL_TOKEN: Self = Self("PLS-E-4001");
+    pub const CONTROL_VERSION: Self = Self("PLS-E-4002");
+    pub const CONTROL_UNKNOWN: Self = Self("PLS-E-4003");
+    pub const CONTROL_ENVELOPE: Self = Self("PLS-E-4004");
+    pub const CONTROL_UI_REQUIRED: Self = Self("PLS-E-4005");
+    pub const CONTROL_PERMISSION: Self = Self("PLS-E-4006");
+    pub const CONTROL_CANCELLED: Self = Self("PLS-E-4007");
+
     pub const fn new(code: &'static str) -> Self {
         Self(code)
     }

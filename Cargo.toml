@@ -14,6 +14,7 @@ members = [
     "crates/pls-inspector",
     "crates/pls-agent",
     "crates/pls-engine",
+    "crates/pls-control",
     "crates/pls-mcp",
     "crates/pls-ui",
     "crates/pls-testkit",
@@ -39,12 +40,13 @@ unimplemented = "warn"
 [workspace.dependencies]
 async-trait = "0.1"
 directories = "6"
+getrandom = "0.2"
 ropey = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tempfile = "3"
 thiserror = "2"
-tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "sync", "time"] }
+tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "sync", "time", "io-util", "net", "signal"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
@@ -59,6 +61,7 @@ pls-emulator = { path = "crates/pls-emulator" }
 pls-inspector = { path = "crates/pls-inspector" }
 pls-agent = { path = "crates/pls-agent" }
 pls-engine = { path = "crates/pls-engine" }
+pls-control = { path = "crates/pls-control" }
 pls-mcp = { path = "crates/pls-mcp" }
 pls-ui = { path = "crates/pls-ui" }
 pls-testkit = { path = "crates/pls-testkit" }
