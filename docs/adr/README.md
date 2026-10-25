@@ -8,6 +8,7 @@ Chaque décision structurante de plstudio est documentée ici.
 | [0002](0002-emulator-streaming.md) | Streaming et contrôle de l'émulateur | Accepté |
 | [0003](0003-code-editing.md) | Édition de code depuis l'inspecteur | Accepté |
 | [0004](0004-ios-swift.md) | Horizon iOS et Swift | Accepté (v2) |
+| [0005](0005-control-transport.md) | Canal de contrôle v0.1 : TCP local + token | Accepté |
 
 ## Format
 

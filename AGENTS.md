@@ -38,7 +38,7 @@ Ce dépôt construit **plstudio**, un IDE Rust pour Flutter/Android. Lis d'abord
   - 2 `pls-avd`, `pls-project`
   - 3 `pls-lsp`, `pls-run`, `pls-emulator`, `pls-inspector`, `pls-agent`
   - 4 `pls-engine`
-  - 5 `pls-mcp`, `pls-ui`
+  - 5 `pls-control`, `pls-mcp`, `pls-ui`
   - 6 `plstudio`, `plstudio-cli`
 - Une crate ne dépend que de couches strictement inférieures.
 - Aucune dépendance entre crates de même couche. Les DTO partagés vont dans `pls-base`.

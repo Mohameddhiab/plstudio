@@ -1,6 +1,6 @@
 # Protocole de contrôle plstudio
 
-Statut : brouillon Phase 0. Ce document sera versionné et testé avant la v0.1.
+Statut : **v0.1 implémenté du transport TCP** (`pls-control`, ADR 0005) — pipes nommées/UDS et bus d'événements suivent. Ce document reste le contrat de référence.
 
 ## Objectif
 
@@ -68,3 +68,41 @@ Réponse :
 - `PLS-E-4005` : commande nécessitant une UI.
 - `PLS-E-4006` : permission refusée.
 - `PLS-E-4007` : job annulé.
+
+## Implémentation v0.1 (`pls-control`)
+
+Livré (ADR 0005) :
+
+- **Transport** : TCP `127.0.0.1` uniquement, token de session obligatoire
+  (32 octets CSPRNG, hexadécimal, comparaison en temps constant). Le token
+  vit dans un fichier hors projet (`%LOCALAPPDATA%\plstudio\control\…` / XDG
+  data dir ; mode 0600 sur Unix) ; la sortie standard du serveur contient le
+  chemin du fichier, jamais le token. Lancement : `plstudio-cli serve
+  [--port n] [--workspace dir] [--trust trusted|restricted] [--token-file p]`.
+- **Framing** : une ligne = un objet `{"jsonrpc":"2.0","id","method","params"}`.
+  L'`id` est obligatoire (pas de notifications entrantes en v0.1) et la
+  réponse l'échoïte tel quel. Ligne bornée à 1 MiB (`PLS-E-4004` au-delà).
+- **Barrière de handshake** : seule la méthode `hello` passe avant le
+  handshake réussi ; tout le reste répond `PLS-E-4006`.
+- **Méthodes** : `hello`, `engine.execute` (`{command, params?}` synchrone ;
+  `wait`/`request_id` acceptés et ignorés), `engine.cancel` (`{job_id}`),
+  `engine.jobs`, `commands.list`. `events.subscribe` répond `PLS-E-1005`
+  tant que le bus d'événements n'existe pas.
+- **Gate de session** : `restricted` (défaut `serve`) refuse les commandes
+  `write`/`destructive` au canal (`PLS-E-4006`) ; `trusted` laisse passer
+  tout le registre.
+- **Audit** : chaque requête journalise la méthode, l'issue et la durée
+  (`target: "control"`) — jamais les paramètres : on ne trace rien plutôt
+  qu'à moitié redacted.
+
+Cartographie des codes : les codes `PLS-E-4xxx` tranchent les incidents du
+**canal** (token, version, méthode/commande inconnue via `PLS-E-4003`,
+enveloppe, permission). Un échec de la **commande elle-même** garde son code
+natif `PLS-E-1xxx` dans la réponse JSON-RPC (avec la chaîne canonique en
+`data.code`) : un `PLS-E-1003` en réponse d'`engine.execute` peut donc
+signifier « session de run inconnue », pas « canal cassé ».
+
+Encore à venir : pipes nommées Windows / UDS Linux (même trait
+`LineTransport`), bus d'événements + `events.subscribe`/notifications
+serveur `event`, rate limit par client, ACL de pipe, montage inverse
+(`--control` côté client).

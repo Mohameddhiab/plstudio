@@ -57,10 +57,11 @@ Voir aussi : [plan.md](plan.md), [design.md](design.md), [docs/adr/](docs/adr/).
 | 3 | `pls-inspector` | VM Service Flutter, widget tree, sélection, localisation, demande de wrap |
 | 3 | `pls-agent` | Provider (Claude), contexte, `ToolHost`, boucle d'outils, diffs, budgets |
 | 4 | `pls-engine` | Registre de commandes, jobs, annulation, progression, undo/audit, événements, orchestration, trust |
+| 5 | `pls-control` | Serveur du canal de contrôle JSON-lines (`plstudio-control/1`) : handshake, token, gating, audit |
 | 5 | `pls-mcp` | Serveur MCP (`rmcp`), outils depuis le registre, danger levels, audit |
 | 5 | `pls-ui` | Interface (egui/GPUI/webview selon ADR 0001), panneaux, palette, inspecteur, agent |
 | 6 | `plstudio` | Binaire desktop |
-| 6 | `plstudio-cli` | Headless, JSON, `mcp`, `--control` |
+| 6 | `plstudio-cli` | Headless, JSON, `run`, `serve` (canal de contrôle), `mcp` en phase suivante |
 | — | `xtask` | `ci`, `layers`, `package`, `schema` |
 | — | `pls-testkit` | Fakes, fixtures, harnais de test (dev uniquement, hors couches) |
 
@@ -153,7 +154,7 @@ Notes :
 
 ## 6. Canal de contrôle et MCP
 
-- **Canal JSON-lines** : named pipe/UDS avec ACL, ou TCP local + token aléatoire par session. Handshake de version. Audit des appels.
+- **Canal JSON-lines** : served par la crate `pls-control` (couche 5). v0.1 : TCP `127.0.0.1` + token CSPRNG par session (fichier de token hors projet) ; pipes nommées Windows / UDS ensuite, derrière le même trait `LineTransport` (ADR 0005). Handshake `hello` de version. Audit des appels sans paramètres.
 - **MCP** (`plstudio-cli mcp`) : headless ou connecté à l'app en cours. Outils : `command_line`, `execute`, `inspect_project`, `screenshot`, `ui_click`.
 - Chaque outil MCP hérite du `danger` de la commande. Read-only par défaut ; `write`/`destructive` exigent un flag ou une confirmation.
 - Token, rate limit, audit log.
